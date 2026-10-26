@@ -25,11 +25,23 @@ jobs:
           flutter-version: '3.24.x'
           channel: 'stable'
 
+      - name: Initialize Flutter Project
+        run: |
+          if [ ! -f "pubspec.yaml" ]; then
+            flutter create --org com.chandu.assistant --project-name mobile_ai_assistant .
+          fi
+
       - name: Get Dependencies
         run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --split-per-abi
+
+      - name: Commit Generated Scaffold
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Initialize standard Flutter project structure"
+          branch: main
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
