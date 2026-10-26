@@ -1,125 +1,149 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const AssistantApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AssistantApp extends StatelessWidget {
+  const AssistantApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Local AI Assistant',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF38BDF8),
+          surface: Color(0xFF1E293B),
+        ),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const AssistantHomePage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class AssistantHomePage extends StatefulWidget {
+  const AssistantHomePage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<AssistantHomePage> createState() => _AssistantHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _AssistantHomePageState extends State<AssistantHomePage> {
+  final FlutterTts _tts = FlutterTts();
+  bool _isSpeaking = false;
+  String _assistantStatus = "Standing by locally";
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  @override
+  void initState() {
+    super.initState();
+    _initTTS();
+    _requestInitialPermissions();
+  }
+
+  Future<void> _requestInitialPermissions() async {
+    await Permission.notification.request();
+  }
+
+  Future<void> _initTTS() async {
+    await _tts.setLanguage("en-US");
+    await _tts.setPitch(1.0);
+    await _tts.setSpeechRate(0.5);
+
+    _tts.setStartHandler(() {
+      setState(() {
+        _isSpeaking = true;
+        _assistantStatus = "Speaking reply...";
+      });
     });
+
+    _tts.setCompletionHandler(() {
+      setState(() {
+        _isSpeaking = false;
+        _assistantStatus = "Standing by locally";
+      });
+    });
+
+    _tts.setErrorHandler((msg) {
+      setState(() {
+        _isSpeaking = false;
+        _assistantStatus = "TTS Error: $msg";
+      });
+    });
+  }
+
+  Future<void> _speakTest() async {
+    const message = "System operational. Local privacy protocols active. Ready for background tasks.";
+    await _tts.speak(message);
+  }
+
+  @override
+  void dispose() {
+    _tts.stop();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('AI Assistant Engine', style: TextStyle(fontWeight: FontWeight.w600)),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF1E293B),
+        elevation: 0,
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isSpeaking ? const Color(0xFF38BDF8).withOpacity(0.2) : const Color(0xFF1E293B),
+                  border: Border.all(
+                    color: _isSpeaking ? const Color(0xFF38BDF8) : Colors.white24,
+                    width: 2.5,
+                  ),
+                ),
+                child: Icon(
+                  _isSpeaking ? Icons.graphic_eq : Icons.mic_none,
+                  size: 48,
+                  color: _isSpeaking ? const Color(0xFF38BDF8) : Colors.white70,
+                ),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                _assistantStatus,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+              FilledButton.icon(
+                onPressed: _speakTest,
+                icon: const Icon(Icons.volume_up),
+                label: const Text('Test Local Voice Output'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF38BDF8),
+                  foregroundColor: const Color(0xFF0F172A),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
